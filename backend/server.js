@@ -2,12 +2,12 @@ const cors = require('cors')
 const express = require('express')
 
 const app = express()
-const port = process.env.PORT || 3000
+const port = process.env.PORT || 5001
 
 // Allow the Vite frontend to make requests to this backend.
 app.use(cors())
 
-// Example: http://localhost:3000/api/type/???
+// Example: http://localhost:5001/api/type/fire
 app.get('/api/type/:name', async (req, res) => {
   const typeName = encodeURIComponent(req.params.name.toLowerCase())
   const pokeApiUrl = `https://pokeapi.co/api/v2/type/${typeName}/`

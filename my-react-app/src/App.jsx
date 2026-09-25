@@ -9,17 +9,35 @@ const types = [
 
 function App() {
   const [selectedType, setSelectedType] = useState(null)
-  const [result, setResult] = useState('')
+  const [result, setResult] = useState(null)
+  const [isLoading, setIsLoading] = useState(false)
 
-  function getMatchup(type) {
-    // API call will go here; for now, return a placeholder response.
-    return `Fake API response: You are fighting a ${type}-type Pokémon.`
+  async function getMatchup(typeName) {
+    try {
+      const response = await fetch(
+        `http://localhost:5001/api/type/${encodeURIComponent(typeName.toLowerCase())}`,
+      )
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Could not load this type matchup.')
+      }
+
+      return data
+    } catch (error) {
+      console.error('Could not get type matchup:', error)
+      return { error: error.message || 'Could not connect to the backend.' }
+    }
   }
 
-  function handleTypeClick(typeName) {
-    const response = getMatchup(typeName)
-    setResult(response)
+  async function handleTypeClick(typeName) {
+    setIsLoading(true)
+    setResult(null)
     setSelectedType(types.find((type) => type.name === typeName))
+
+    const response = await getMatchup(typeName)
+    setResult(response)
+    setIsLoading(false)
   }
 
   return (
@@ -36,7 +54,7 @@ function App() {
         <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
           <p className="mb-2 text-sm font-medium text-slate-400">Type matchups · 01</p>
           <h1 className="text-2xl font-black tracking-tight sm:text-3xl">Who are you up against?</h1>
-          <p className="mt-2 text-sm leading-6 text-slate-500">Choose your opponent’s type to see what they’re weak to.</p>
+          <p className="mt-2 text-sm leading-6 text-slate-500">Choose a type to check what it resists and what it is weak to.</p>
 
           <div className="mt-6 grid grid-cols-2 gap-3">
             {types.map((type) => {
@@ -47,8 +65,9 @@ function App() {
                   key={type.name}
                   type="button"
                   onClick={() => handleTypeClick(type.name)}
+                  disabled={isLoading}
                   aria-pressed={isSelected}
-                  className={`flex min-h-14 touch-manipulation items-center gap-3 rounded-xl border px-4 text-left text-sm font-semibold transition duration-150 active:scale-95 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-500 ${isSelected ? 'border-red-400 bg-red-50 ring-2 ring-red-100' : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50'}`}
+                  className={`flex min-h-14 touch-manipulation items-center gap-3 rounded-xl border px-4 text-left text-sm font-semibold transition duration-150 active:scale-95 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-500 disabled:cursor-wait disabled:opacity-60 ${isSelected ? 'border-red-400 bg-red-50 ring-2 ring-red-100' : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50'}`}
                 >
                   <span className={`grid size-8 place-items-center rounded-full text-xs font-black ${type.color}`}>{type.mark}</span>
                   {type.name}
@@ -58,8 +77,21 @@ function App() {
           </div>
 
           <div aria-live="polite" className="mt-5 min-h-16 rounded-xl bg-[#f7f6f1] px-4 py-3">
-            {result ? (
-              <p className="py-2 text-sm font-medium text-slate-700">{result}</p>
+            {isLoading ? (
+              <p className="py-2 text-sm text-slate-500">Checking matchup…</p>
+            ) : result?.error ? (
+              <p role="alert" className="py-2 text-sm font-medium text-red-600">{result.error}</p>
+            ) : result ? (
+              <div className="space-y-3 py-1 text-sm">
+                <div>
+                  <p className="font-semibold text-slate-500">Deals half damage to</p>
+                  <p className="mt-1 font-bold capitalize text-slate-800">{result.half_damage_to.join(', ') || 'None'}</p>
+                </div>
+                <div>
+                  <p className="font-semibold text-slate-500">Takes double damage from</p>
+                  <p className="mt-1 font-bold capitalize text-slate-800">{result.double_damage_from.join(', ') || 'None'}</p>
+                </div>
+              </div>
             ) : (
               <p className="py-2 text-sm text-slate-400">Choose a type to reveal its weaknesses.</p>
             )}
